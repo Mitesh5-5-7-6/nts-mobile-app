@@ -1,3 +1,5 @@
+import type { DashboardQueryParams } from "@/types/api.types";
+
 export const QUERY_KEYS = {
   // ─── Auth ──────────────────────────────────────────────────────────────────
   session: ['session'] as const,
@@ -5,34 +7,44 @@ export const QUERY_KEYS = {
   // ─── Dashboard ─────────────────────────────────────────────────────────────
   dashboard: {
     all: ['dashboard'] as const,
-    stats: () => ['dashboard', 'stats'] as const,
-    tiffinTrend: () => ['dashboard', 'tiffin-trend'] as const,
-    revenueExpense: () => ['dashboard', 'revenue-expense'] as const,
-    expenseCategories: () => ['dashboard', 'expense-categories'] as const,
-    recentTiffins: () => ['dashboard', 'recent-tiffins'] as const,
-    recentExpenses: () => ['dashboard', 'recent-expenses'] as const,
-    pendingPayments: () => ['dashboard', 'pending-payments'] as const,
-    topCustomers: () => ['dashboard', 'top-customers'] as const,
+    stats: (params?: DashboardQueryParams) => [...QUERY_KEYS.dashboard.all, 'stats', params] as const,
+    tiffinTrend: (params?: DashboardQueryParams) => [...QUERY_KEYS.dashboard.all, 'tiffin-trend', params] as const,
+    revenueExpense: (params?: DashboardQueryParams) => [...QUERY_KEYS.dashboard.all, 'revenue-expense', params] as const,
+    expenseCategories: (params?: DashboardQueryParams) => [...QUERY_KEYS.dashboard.all, 'expense-categories', params] as const,
+    recentTiffins: (params?: DashboardQueryParams) => [...QUERY_KEYS.dashboard.all, 'recent-tiffins', params] as const,
+    recentExpenses: (params?: DashboardQueryParams) => [...QUERY_KEYS.dashboard.all, 'recent-expenses', params] as const,
+    pendingPayments: () => [...QUERY_KEYS.dashboard.all, 'pending-payments'] as const,
+    topCustomers: (params?: DashboardQueryParams) => [...QUERY_KEYS.dashboard.all, 'top-customers', params] as const,
     // v2
-    monthSummary: () => ['dashboard', 'month-summary'] as const,
-    v2Stats: (params?: object) => ['dashboard', 'v2', 'stats', params] as const,
-    v2TiffinTrend: (params?: object) => ['dashboard', 'v2', 'tiffin-trend', params] as const,
-    v2RevenueExpense: (params?: object) => ['dashboard', 'v2', 'revenue-expense', params] as const,
+    monthSummary: () => [...QUERY_KEYS.dashboard.all, 'month-summary'] as const,
+    v2Stats: (params?: object) => [...QUERY_KEYS.dashboard.all, 'v2', 'stats', params] as const,
+    v2TiffinTrend: (params?: object) => [...QUERY_KEYS.dashboard.all, 'v2', 'tiffin-trend', params] as const,
+    v2RevenueExpense: (params?: object) => [...QUERY_KEYS.dashboard.all, 'v2', 'revenue-expense', params] as const,
   },
 
   // ─── Customers ─────────────────────────────────────────────────────────────
   customers: {
     all: ['customers'] as const,
-    list: (params?: object) => ['customers', 'list', params] as const,
-    detail: (id: string) => ['customers', 'detail', id] as const,
-    stats: () => ['customers', 'stats'] as const,
+
+    lists: () => [...QUERY_KEYS.customers.all, 'list'] as const,
+    list: (params?: object) =>
+      [...QUERY_KEYS.customers.lists(), params] as const,
+
+    details: () => [...QUERY_KEYS.customers.all, 'detail'] as const,
+    detail: (id: string) =>
+      [...QUERY_KEYS.customers.details(), id] as const,
+
+    stats: () => [...QUERY_KEYS.customers.all, 'stats'] as const,
+
+    paymentSummary: (id: string) =>
+      [...QUERY_KEYS.customers.all, 'payment-summary', id] as const,
   },
 
   // ─── Tiffin Entries ────────────────────────────────────────────────────────
   dailyEntries: {
     all: ['daily-entries'] as const,
-    byDate: (date: string) => ['daily-entries', date] as const,
-    preview: (params: object) => ['daily-entries', 'preview', params] as const,
+    byDate: (date: string) => [...QUERY_KEYS.dailyEntries.all, 'daily-entries', date] as const,
+    preview: (params: object) => [...QUERY_KEYS.dailyEntries.all, 'daily-entries', 'preview', params] as const,
   },
 
   // ─── Payments ──────────────────────────────────────────────────────────────

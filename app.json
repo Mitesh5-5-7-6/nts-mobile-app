@@ -35,7 +35,11 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@sentry/react-native",
+      "@react-native-firebase/app",
+      "@react-native-firebase/analytics",
+      "@react-native-firebase/messaging"
     ],
     "experiments": {
       "typedRoutes": true,
