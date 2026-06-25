@@ -17,9 +17,8 @@ import type {
  * Dashboard v2 API — NTS v1 endpoints.
  * These endpoints respect flexible date ranges via fromDate/toDate/range.
  *
- * NOTE: The apiClient baseURL is /api/nts/v1, but the legacy dashboard endpoints
- * live at /api/dashboard/*. The v2 endpoints live at /api/nts/v1/dashboard/*.
- * Since our baseURL already points to /api/nts/v1, we use relative paths to /dashboard/*.
+ * The apiClient baseURL is the API root (/api), so v2 endpoints are addressed
+ * at /nts/v1/dashboard/* (full URL: /api/nts/v1/dashboard/*).
  */
 const buildParams = (params?: DashboardQueryParams) => {
   if (!params) return {};
@@ -33,7 +32,7 @@ const buildParams = (params?: DashboardQueryParams) => {
 export const DashboardService = {
   getStats: async (params?: DashboardQueryParams) => {
     const response = await apiClient.get<ApiResponse<DashboardStats>>(
-      '/dashboard/stats',
+      '/nts/v1/dashboard/stats',
       { params: buildParams(params) }
     );
     return response.data;
@@ -41,7 +40,7 @@ export const DashboardService = {
 
   getTiffinTrend: async (params?: DashboardQueryParams) => {
     const response = await apiClient.get<ApiResponse<TiffinTrendItem[]>>(
-      '/dashboard/tiffin-trend',
+      '/nts/v1/dashboard/tiffin-trend',
       { params: buildParams(params) }
     );
     return response.data;
@@ -49,7 +48,7 @@ export const DashboardService = {
 
   getRevenueExpense: async (params?: DashboardQueryParams) => {
     const response = await apiClient.get<ApiResponse<RevenueExpenseItem[]>>(
-      '/dashboard/revenue-expense',
+      '/nts/v1/dashboard/revenue-expense',
       { params: buildParams(params) }
     );
     return response.data;
@@ -57,7 +56,7 @@ export const DashboardService = {
 
   getExpenseCategories: async (params?: DashboardQueryParams) => {
     const response = await apiClient.get<ApiResponse<ExpenseCategoryItem[]>>(
-      '/dashboard/expense-categories',
+      '/nts/v1/dashboard/expense-categories',
       { params: buildParams(params) }
     );
     return response.data;
@@ -66,7 +65,7 @@ export const DashboardService = {
   getRecentTiffins: async (params?: DashboardQueryParams & { limit?: number }) => {
     const p = { ...buildParams(params), ...(params?.limit ? { limit: String(params.limit) } : {}) };
     const response = await apiClient.get<ApiResponse<RecentTiffinItem[]>>(
-      '/dashboard/recent-tiffins',
+      '/nts/v1/dashboard/recent-tiffins',
       { params: p }
     );
     return response.data;
@@ -75,7 +74,7 @@ export const DashboardService = {
   getRecentExpenses: async (params?: DashboardQueryParams & { limit?: number }) => {
     const p = { ...buildParams(params), ...(params?.limit ? { limit: String(params.limit) } : {}) };
     const response = await apiClient.get<ApiResponse<RecentExpenseItem[]>>(
-      '/dashboard/recent-expenses',
+      '/nts/v1/dashboard/recent-expenses',
       { params: p }
     );
     return response.data;
@@ -83,14 +82,14 @@ export const DashboardService = {
 
   getPendingPayments: async () => {
     const response = await apiClient.get<ApiResponse<PendingPaymentItem[]>>(
-      '/dashboard/pending-payments'
+      '/nts/v1/dashboard/pending-payments'
     );
     return response.data;
   },
 
   getTopCustomers: async (params?: DashboardQueryParams) => {
     const response = await apiClient.get<ApiResponse<TopCustomerItem[]>>(
-      '/dashboard/top-customers',
+      '/nts/v1/dashboard/top-customers',
       { params: buildParams(params) }
     );
     return response.data;
@@ -98,7 +97,7 @@ export const DashboardService = {
 
   getMonthSummary: async () => {
     const response = await apiClient.get<ApiResponse<MonthSummary>>(
-      '/dashboard/month-summary'
+      '/nts/v1/dashboard/month-summary'
     );
     return response.data;
   },

@@ -1,102 +1,205 @@
-import { CustomerCard } from '@/components/ui/Card';
+import { CustomerDetailSheet } from '@/components/customers/CustomerDetailSheet';
+import { CustomerFormSheet } from '@/components/customers/CustomerFormSheet';
+import { CustomerListItem } from '@/components/customers/CustomerListItem';
+import { Button } from '@/components/ui/Button';
+import { CardContainer } from '@/components/ui/Card';
+import { EmptyState, ErrorState, Skeleton } from '@/components/ui/Feedback';
 import { SearchInput } from '@/components/ui/Input';
+import { ContentWrapper, PageContainer, PageHeader, SafeAreaContainer } from '@/components/ui/Layout';
+import { ConfirmationModal } from '@/components/ui/Modal';
 import {
-  ContentWrapper,
-  PageContainer,
-  PageHeader,
-  SafeAreaContainer,
-} from '@/components/ui/Layout';
+  useCustomerList,
+  useCustomerStats,
+  useDeleteCustomer,
+} from '@/hooks/api/useCustomers';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { analyticsService } from '@/services/analytics/analytics';
+import { AnalyticsEventNames, ScreenNames } from '@/services/analytics/events';
 import { useAppTheme } from '@/theme';
+import type { Customer } from '@/types/api.types';
 import { FlashList } from '@shopify/flash-list';
-import { useCallback, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, RefreshControl, StyleSheet, View } from 'react-native';
 
-interface CustomerItem {
-  id: string;
-  name: string;
-  phone: string;
-  tiffinStatus: 'active' | 'suspended' | 'cancelled';
-  balance: number;
-}
-
-const MOCK_CUSTOMERS: CustomerItem[] = [
-  { id: '1', name: 'Rohan Verma', phone: '+91 98765 43210', tiffinStatus: 'active', balance: 1800 },
-  { id: '2', name: 'Sneha Reddy', phone: '+91 87654 32109', tiffinStatus: 'suspended', balance: 2400 },
-  { id: '3', name: 'Amit Patel', phone: '+91 76543 21098', tiffinStatus: 'active', balance: -500 },
-  { id: '4', name: 'Ananya Iyer', phone: '+91 65432 10987', tiffinStatus: 'active', balance: 0 },
-  { id: '5', name: 'Kabir Kapoor', phone: '+91 54321 09876', tiffinStatus: 'cancelled', balance: 350 },
-  { id: '6', name: 'Meera Sen', phone: '+91 43210 98765', tiffinStatus: 'active', balance: 1200 },
-  { id: '7', name: 'Vikram Singh', phone: '+91 32109 87654', tiffinStatus: 'active', balance: -1000 },
-];
+type FormState = { mode: 'create' } | { mode: 'edit'; customer: Customer } | null;
 
 export default function CustomersScreen() {
-  const { spacing } = useAppTheme();
-  const [searchQuery, setSearchQuery] = useState('');
+  const { colors, spacing } = useAppTheme();
 
-  // 1. Filtered data
-  const filteredCustomers = MOCK_CUSTOMERS.filter((customer) =>
-    customer.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const [searchInput, setSearchInput] = useState('');
+  const search = useDebouncedValue(searchInput.trim(), 350);
+
+  const list = useCustomerList({ search });
+  const stats = useCustomerStats();
+  const deleteCustomer = useDeleteCustomer();
+
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const [formState, setFormState] = useState<FormState>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Customer | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const customers = useMemo(
+    () => list.data?.pages.flatMap((page) => page.data ?? []) ?? [],
+    [list.data],
   );
 
-  // 2. Memoized list rendering helpers (avoids inline functions inside FlashList for high performance)
-  const renderItem = useCallback(({ item }: { item: CustomerItem }) => {
-    return (
-      <CustomerCard
-        name={item.name}
-        phone={item.phone}
-        tiffinStatus={item.tiffinStatus}
-        balance={item.balance}
-        onPress={() => console.log('Tapped customer:', item.name)}
-        style={styles.cardMargin}
-      />
-    );
+  useEffect(() => {
+    analyticsService.trackScreen(ScreenNames.CUSTOMERS);
   }, []);
 
-  const keyExtractor = useCallback((item: CustomerItem) => item.id, []);
+  const openDetail = useCallback((customer: Customer) => {
+    setDetailId(customer._id);
+    analyticsService.trackEvent(AnalyticsEventNames.CUSTOMER_VIEWED, { customer_id: customer._id });
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([list.refetch(), stats.refetch()]);
+    setRefreshing(false);
+  }, [list, stats]);
+
+  const onEndReached = useCallback(() => {
+    if (list.hasNextPage && !list.isFetchingNextPage) {
+      list.fetchNextPage();
+    }
+  }, [list]);
+
+  const confirmDelete = useCallback(() => {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    deleteCustomer.mutate(target._id, {
+      onSuccess: () =>
+        analyticsService.trackEvent(AnalyticsEventNames.CUSTOMER_DELETED, { customer_id: target._id }),
+    });
+    setDeleteTarget(null);
+  }, [deleteTarget, deleteCustomer]);
+
+  const statsSubtitle = stats.data
+    ? `${stats.data.active} active · ${stats.data.total} total`
+    : 'Manage your customers';
+
+  const renderEmpty = () => {
+    if (list.isLoading) return <CustomerListSkeleton />;
+    if (list.isError) {
+      return <ErrorState message="Couldn't load customers." onRetry={list.refetch} />;
+    }
+    return (
+      <EmptyState
+        title={search ? 'No matches' : 'No customers yet'}
+        description={search ? 'No customers match your search.' : 'Add your first customer to get started.'}
+        actionTitle={search ? undefined : 'Add Customer'}
+        onActionPress={search ? undefined : () => setFormState({ mode: 'create' })}
+      />
+    );
+  };
 
   return (
     <PageContainer>
-      <SafeAreaContainer>
-        <ContentWrapper style={styles.flex}>
-          {/* Header */}
-          <PageHeader title="Customers" subtitle="Manage plan statuses and outstanding balances" />
-
-          {/* Search bar */}
-          <SearchInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search customers by name..."
-            style={styles.searchBar}
+      <SafeAreaContainer edges={['top']}>
+        <ContentWrapper>
+          <PageHeader
+            title="Customers"
+            subtitle={statsSubtitle}
+            rightAction={
+              <Button title="Add" iconLeft="plus" size="sm" onPress={() => setFormState({ mode: 'create' })} />
+            }
           />
-
-          {/* High-performance FlashList */}
-          <View style={styles.listContainer}>
-            <FlashList
-              data={filteredCustomers}
-              renderItem={renderItem}
-              keyExtractor={keyExtractor}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: spacing.giant * 2 }}
-            />
-          </View>
+          <SearchInput
+            value={searchInput}
+            onChangeText={setSearchInput}
+            placeholder="Search by name or phone"
+          />
         </ContentWrapper>
+
+        <View style={styles.listWrap}>
+          <FlashList
+            data={customers}
+            keyExtractor={(item) => item._id}
+            renderItem={({ item }) => <CustomerListItem customer={item} onPress={openDetail} />}
+            onEndReached={onEndReached}
+            onEndReachedThreshold={0.4}
+            contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.giant * 2.5 }}
+            ListEmptyComponent={renderEmpty()}
+            ListFooterComponent={
+              list.isFetchingNextPage ? (
+                <ActivityIndicator color={colors.primary} style={{ paddingVertical: spacing.lg }} />
+              ) : null
+            }
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.primary}
+                colors={[colors.primary]}
+              />
+            }
+          />
+        </View>
       </SafeAreaContainer>
+
+      {/* Detail sheet */}
+      <CustomerDetailSheet
+        visible={detailId !== null}
+        customerId={detailId}
+        onClose={() => setDetailId(null)}
+        onEdit={(customer) => {
+          setDetailId(null);
+          setFormState({ mode: 'edit', customer });
+        }}
+        onDelete={(customer) => {
+          setDetailId(null);
+          setDeleteTarget(customer);
+        }}
+      />
+
+      {/* Create / edit form. Keyed so it remounts (and re-seeds) on each open. */}
+      <CustomerFormSheet
+        key={formState ? (formState.mode === 'edit' ? `edit-${formState.customer._id}` : 'create') : 'closed'}
+        visible={formState !== null}
+        customer={formState?.mode === 'edit' ? formState.customer : undefined}
+        onClose={() => setFormState(null)}
+      />
+
+      {/* Delete confirmation */}
+      <ConfirmationModal
+        visible={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+        title="Delete customer?"
+        description={`This deactivates ${deleteTarget?.full_name ?? 'this customer'}. Their history is preserved.`}
+        confirmTitle="Delete"
+        isDestructive
+      />
     </PageContainer>
   );
 }
 
+function CustomerListSkeleton() {
+  const { spacing } = useAppTheme();
+  return (
+    <View style={{ paddingTop: spacing.sm }}>
+      {Array.from({ length: 7 }).map((_, i) => (
+        <CardContainer key={i} style={{ marginBottom: 10 }}>
+          <View style={styles.skeletonRow}>
+            <Skeleton width={44} height={44} borderRadius={22} />
+            <View style={{ flex: 1, marginLeft: spacing.md }}>
+              <Skeleton width="55%" height={14} borderRadius={4} style={{ marginBottom: 8 }} />
+              <Skeleton width="80%" height={11} borderRadius={4} style={{ marginBottom: 6 }} />
+              <Skeleton width="40%" height={11} borderRadius={4} />
+            </View>
+          </View>
+        </CardContainer>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  flex: {
+  listWrap: {
     flex: 1,
   },
-  searchBar: {
-    marginBottom: 8,
-  },
-  listContainer: {
-    flex: 1,
-    width: '100%',
-  },
-  cardMargin: {
-    marginBottom: 10,
+  skeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

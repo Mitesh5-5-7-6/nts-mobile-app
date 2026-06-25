@@ -1,46 +1,106 @@
+import {
+  DashboardRangeTabs,
+  rangeToParams,
+  type DashboardRangeKey,
+} from '@/components/dashboard/DashboardRangeTabs';
+import { DashboardStatTile } from '@/components/dashboard/DashboardStatTile';
+import { SectionCard } from '@/components/dashboard/SectionCard';
+import {
+  ExpenseCategoryChart,
+  RevenueExpenseChart,
+  TiffinTrendChart,
+} from '@/components/dashboard/charts';
+import {
+  PendingPaymentRow,
+  RecentExpenseRow,
+  RecentTiffinRow,
+  TopCustomerRow,
+} from '@/components/dashboard/lists';
 import AppIcon from '@/components/ui/AppIcon';
+import { ContentWrapper, PageContainer, PageHeader, SafeAreaContainer } from '@/components/ui/Layout';
+import { CardContainer } from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Feedback';
+import { QUERY_KEYS } from '@/constants/queryKeys';
 import {
-  CustomerCard,
-  InfoCard,
-  PaymentCard,
-  StatCard,
-  SummaryCard,
-} from '@/components/ui/Card';
-import {
-  ContentWrapper,
-  PageContainer,
-  PageHeader,
-  SafeAreaContainer,
-  SectionHeader,
-} from '@/components/ui/Layout';
+  useDashboardStats,
+  useExpenseCategories,
+  useMonthSummary,
+  usePendingPayments,
+  useRecentExpenses,
+  useRecentTiffins,
+  useRevenueExpense,
+  useTiffinTrend,
+  useTopCustomers,
+} from '@/hooks/api/useDashboard';
+import { analyticsService } from '@/services/analytics/analytics';
+import { AnalyticsEventNames, ScreenNames } from '@/services/analytics/events';
 import { useAppTheme } from '@/theme';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { formatCurrency, formatNumber, formatPercent, isPositiveTrend } from '@/utils/format';
+import { useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 
 export default function DashboardScreen() {
-  const { colors } = useAppTheme();
+  const { colors, spacing, radius } = useAppTheme();
+  const { width } = useWindowDimensions();
+  const queryClient = useQueryClient();
 
-  const handleNotificationPress = () => {
-    console.log('Notification pressed');
-  };
+  const [range, setRange] = useState<DashboardRangeKey>('today');
+  const params = useMemo(() => rangeToParams(range), [range]);
 
-  const handleSeeAllPayments = () => {
-    console.log('See all payments');
-  };
+  // Content width inside ContentWrapper (lg gutters) and a Card (md padding).
+  const chartWidth = Math.max(0, width - spacing.lg * 2 - spacing.md * 2);
+
+  const stats = useDashboardStats(params);
+  const month = useMonthSummary();
+  const tiffinTrend = useTiffinTrend(params);
+  const revenueExpense = useRevenueExpense(params);
+  const expenseCategories = useExpenseCategories(params);
+  const recentTiffins = useRecentTiffins({ ...params, limit: 5 });
+  const recentExpenses = useRecentExpenses({ ...params, limit: 5 });
+  const topCustomers = useTopCustomers(params);
+  const pendingPayments = usePendingPayments();
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    analyticsService.trackScreen(ScreenNames.DASHBOARD);
+    analyticsService.trackEvent(AnalyticsEventNames.DASHBOARD_OPENED);
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    analyticsService.trackEvent(AnalyticsEventNames.DASHBOARD_REFRESHED);
+    await queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.all });
+    setRefreshing(false);
+  }, [queryClient]);
+
+  const s = stats.data;
+  const m = month.data;
 
   return (
-    <PageContainer scrollable>
-      <SafeAreaContainer>
+    <PageContainer>
+      <SafeAreaContainer edges={['top']}>
         <ContentWrapper>
-          {/* Header */}
           <PageHeader
-            title="TiffinTrack"
-            subtitle="Manage your tiffin service business"
+            title="Dashboard"
+            subtitle={format(new Date(), 'EEEE, dd MMM yyyy')}
             rightAction={
               <Pressable
-                onPress={handleNotificationPress}
+                accessibilityRole="button"
+                accessibilityLabel="Notifications"
                 style={({ pressed }) => [
-                  styles.headerIconButton,
-                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                  styles.headerIcon,
+                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, borderRadius: radius.full },
                   pressed && styles.pressed,
                 ]}
               >
@@ -48,95 +108,260 @@ export default function DashboardScreen() {
               </Pressable>
             }
           />
-
-          {/* Info Banner */}
-          <InfoCard
-            title="Setup Completed!"
-            message="Your application shell, design system, and core UI systems have been successfully initialized."
-            onClose={() => { }}
-          />
-
-          {/* Top Business Summary Card */}
-          <SummaryCard
-            title="June Overview"
-            primaryAmount="₹34,500"
-            secondaryLabel="Total earnings this month (+18% vs last month)"
-            metrics={[
-              { label: 'Active Plans', value: '42', icon: 'customers' },
-              { label: 'Pending Dues', value: '₹4,200', icon: 'payments' },
-              { label: 'Delivered', value: '280', icon: 'expense' },
-            ]}
-            style={styles.sectionMargin}
-          />
-
-          {/* Stats Grid */}
-          <View style={styles.statsGrid}>
-            <StatCard
-              title="Active Customers"
-              value="42"
-              icon="customers"
-              trend={{ value: '+4 new', isPositive: true }}
-              style={styles.gridCard}
-            />
-            <StatCard
-              title="Revenue Today"
-              value="₹1,250"
-              icon="dollar"
-              trend={{ value: 'Plan auto-renew', isPositive: true }}
-              style={styles.gridCard}
-            />
-          </View>
-
-          {/* Recent Payments Section */}
-          <SectionHeader
-            title="Recent Payments"
-            actionTitle="View All"
-            onActionPress={handleSeeAllPayments}
-          />
-          <View style={styles.cardList}>
-            <PaymentCard
-              customerName="Aarav Sharma"
-              amount={1200}
-              date="Today, 10:30 AM"
-              method="UPI"
-              status="completed"
-            />
-            <PaymentCard
-              customerName="Priya Patel"
-              amount={1500}
-              date="Yesterday, 04:15 PM"
-              method="Cash"
-              status="completed"
-            />
-          </View>
-
-          {/* Customers with Outstanding Dues */}
-          <SectionHeader title="Outstanding Dues" />
-          <View style={styles.cardList}>
-            <CustomerCard
-              name="Rohan Verma"
-              phone="+91 98765 43210"
-              tiffinStatus="active"
-              balance={1800}
-            />
-            <CustomerCard
-              name="Sneha Reddy"
-              phone="+91 87654 32109"
-              tiffinStatus="suspended"
-              balance={2400}
-            />
-          </View>
         </ContentWrapper>
+
+        <DashboardRangeTabs value={range} onChange={setRange} />
+
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingTop: spacing.md, paddingBottom: spacing.giant * 2.5 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
+        >
+          <ContentWrapper>
+            {/* ── Overview stat tiles ───────────────────────────────── */}
+            {stats.isLoading && !s ? (
+              <OverviewSkeleton spacing={spacing} />
+            ) : stats.isError && !s ? (
+              <SectionCard title="Today's Overview" isError onRetry={stats.refetch} />
+            ) : (
+              <View style={{ marginBottom: spacing.xs }}>
+                <DashboardStatTile
+                  label="Tiffins"
+                  value={formatNumber(s?.todayTiffin.total ?? 0)}
+                  subtitle={`Morning ${s?.todayTiffin.morning ?? 0} · Evening ${s?.todayTiffin.evening ?? 0}`}
+                  delta={s?.todayTiffin.vsYesterday}
+                  icon="calendar"
+                  color={colors.primary}
+                  bgColor={colors.primaryLight}
+                  style={{ marginBottom: spacing.md }}
+                />
+                <View style={[styles.gridRow, { gap: spacing.md, marginBottom: spacing.md }]}>
+                  <DashboardStatTile
+                    label="Revenue"
+                    value={formatCurrency(s?.todayRevenue.amount ?? 0)}
+                    delta={s?.todayRevenue.vsYesterday}
+                    icon="dollar"
+                    color={colors.success}
+                    bgColor={colors.successLight}
+                    style={styles.flex1}
+                  />
+                  <DashboardStatTile
+                    label="Expense"
+                    value={formatCurrency(s?.todayExpense.amount ?? 0)}
+                    delta={s?.todayExpense.vsYesterday}
+                    icon="expense"
+                    color={colors.error}
+                    bgColor={colors.errorLight}
+                    style={styles.flex1}
+                  />
+                </View>
+                <View style={[styles.gridRow, { gap: spacing.md }]}>
+                  <DashboardStatTile
+                    label="Profit"
+                    value={formatCurrency(s?.todayProfit.amount ?? 0)}
+                    delta={s?.todayProfit.vsYesterday}
+                    icon="dashboard"
+                    color={colors.secondary}
+                    bgColor={colors.secondaryLight}
+                    style={styles.flex1}
+                  />
+                  <DashboardStatTile
+                    label="Pending"
+                    value={formatCurrency(s?.pendingPayments.amount ?? 0)}
+                    subtitle={`From ${s?.pendingPayments.customerCount ?? 0} customers`}
+                    icon="payments"
+                    color={colors.warning}
+                    bgColor={colors.warningLight}
+                    style={styles.flex1}
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* ── This month at a glance ────────────────────────────── */}
+            <SectionCard
+              title="This Month at a Glance"
+              subtitle="Current month vs last month"
+              isLoading={month.isLoading && !m}
+              isError={month.isError && !m}
+              onRetry={month.refetch}
+              loadingHeight={90}
+            >
+              <View style={styles.glanceGrid}>
+                <GlanceMetric label="Total Tiffins" value={formatNumber(m?.tiffins.total ?? 0)} delta={m?.tiffins.vsLastMonth} />
+                <GlanceMetric label="Avg / Day" value={formatNumber(Math.round(m?.tiffins.avgPerDay ?? 0))} />
+                <GlanceMetric label="Revenue" value={formatCurrency(m?.revenue.amount ?? 0)} delta={m?.revenue.vsLastMonth} />
+                <GlanceMetric label="Expenses" value={formatCurrency(m?.expense.amount ?? 0)} delta={m?.expense.vsLastMonth} invertDelta />
+                <GlanceMetric label="Net Profit" value={formatCurrency(m?.profit.amount ?? 0)} delta={m?.profit.vsLastMonth} />
+                <GlanceMetric label="Active Customers" value={formatNumber(m?.activeCustomers ?? 0)} />
+              </View>
+            </SectionCard>
+
+            {/* ── Charts ────────────────────────────────────────────── */}
+            <SectionCard
+              title="Tiffin Count"
+              subtitle="Morning vs Evening"
+              isLoading={tiffinTrend.isLoading && !tiffinTrend.data}
+              isError={tiffinTrend.isError && !tiffinTrend.data}
+              isEmpty={!tiffinTrend.data?.length}
+              onRetry={tiffinTrend.refetch}
+            >
+              {tiffinTrend.data ? <TiffinTrendChart data={tiffinTrend.data} width={chartWidth} /> : null}
+            </SectionCard>
+
+            <SectionCard
+              title="Revenue vs Expense"
+              subtitle="Daily trend"
+              isLoading={revenueExpense.isLoading && !revenueExpense.data}
+              isError={revenueExpense.isError && !revenueExpense.data}
+              isEmpty={!revenueExpense.data?.length}
+              onRetry={revenueExpense.refetch}
+            >
+              {revenueExpense.data ? <RevenueExpenseChart data={revenueExpense.data} width={chartWidth} /> : null}
+            </SectionCard>
+
+            <SectionCard
+              title="Expense by Category"
+              subtitle="Breakdown for this period"
+              isLoading={expenseCategories.isLoading && !expenseCategories.data}
+              isError={expenseCategories.isError && !expenseCategories.data}
+              isEmpty={!expenseCategories.data?.length}
+              onRetry={expenseCategories.refetch}
+            >
+              {expenseCategories.data ? <ExpenseCategoryChart data={expenseCategories.data} /> : null}
+            </SectionCard>
+
+            {/* ── Recent + top lists ────────────────────────────────── */}
+            <SectionCard
+              title="Recent Tiffin Entries"
+              isLoading={recentTiffins.isLoading && !recentTiffins.data}
+              isError={recentTiffins.isError && !recentTiffins.data}
+              isEmpty={!recentTiffins.data?.length}
+              emptyText="No recent tiffin entries."
+              onRetry={recentTiffins.refetch}
+              loadingHeight={180}
+            >
+              {recentTiffins.data?.map((item, i) => (
+                <RecentTiffinRow key={item.id} item={item} showDivider={i < recentTiffins.data!.length - 1} />
+              ))}
+            </SectionCard>
+
+            <SectionCard
+              title="Recent Expenses"
+              isLoading={recentExpenses.isLoading && !recentExpenses.data}
+              isError={recentExpenses.isError && !recentExpenses.data}
+              isEmpty={!recentExpenses.data?.length}
+              emptyText="No recent expenses."
+              onRetry={recentExpenses.refetch}
+              loadingHeight={180}
+            >
+              {recentExpenses.data?.map((item, i) => (
+                <RecentExpenseRow key={item.id} item={item} showDivider={i < recentExpenses.data!.length - 1} />
+              ))}
+            </SectionCard>
+
+            <SectionCard
+              title="Top Customers"
+              subtitle="By tiffin amount this period"
+              isLoading={topCustomers.isLoading && !topCustomers.data}
+              isError={topCustomers.isError && !topCustomers.data}
+              isEmpty={!topCustomers.data?.length}
+              emptyText="No customer activity yet."
+              onRetry={topCustomers.refetch}
+              loadingHeight={180}
+            >
+              {topCustomers.data?.map((item, i) => (
+                <TopCustomerRow key={`${item.rank}-${item.name}`} item={item} showDivider={i < topCustomers.data!.length - 1} />
+              ))}
+            </SectionCard>
+
+            <SectionCard
+              title="Pending Payments"
+              subtitle="Customers with outstanding balance"
+              isLoading={pendingPayments.isLoading && !pendingPayments.data}
+              isError={pendingPayments.isError && !pendingPayments.data}
+              isEmpty={!pendingPayments.data?.length}
+              emptyText="All caught up — no pending payments."
+              onRetry={pendingPayments.refetch}
+              loadingHeight={180}
+            >
+              {pendingPayments.data?.map((item, i) => (
+                <PendingPaymentRow key={item.id} item={item} showDivider={i < pendingPayments.data!.length - 1} />
+              ))}
+            </SectionCard>
+          </ContentWrapper>
+        </ScrollView>
       </SafeAreaContainer>
     </PageContainer>
   );
 }
 
+/** A single metric cell inside the "Month at a Glance" grid. */
+function GlanceMetric({
+  label,
+  value,
+  delta,
+  invertDelta,
+}: {
+  label: string;
+  value: string;
+  delta?: number;
+  invertDelta?: boolean;
+}) {
+  const { colors, spacing, typography } = useAppTheme();
+  // For expenses a lower number is "good", so the up/down semantics invert.
+  const positive = invertDelta ? !isPositiveTrend(delta) : isPositiveTrend(delta);
+  return (
+    <View style={styles.glanceCell}>
+      <Text style={{ color: colors.textMuted, fontSize: typography.size.xs }}>{label}</Text>
+      <Text
+        numberOfLines={1}
+        style={{ color: colors.text, fontSize: typography.size.lg, fontWeight: '800', marginTop: spacing.xxs, fontFamily: typography.family.rounded }}
+      >
+        {value}
+      </Text>
+      {delta !== undefined ? (
+        <Text style={{ color: positive ? colors.success : colors.error, fontSize: 11, fontWeight: '600', marginTop: 2 }}>
+          {formatPercent(delta)} vs last
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function OverviewSkeleton({ spacing }: { spacing: ReturnType<typeof useAppTheme>['spacing'] }) {
+  return (
+    <View style={{ marginBottom: spacing.xs }}>
+      <CardContainer style={{ marginBottom: spacing.md }}>
+        <Skeleton height={64} borderRadius={8} />
+      </CardContainer>
+      <View style={[styles.gridRow, { gap: spacing.md }]}>
+        <View style={styles.flex1}>
+          <CardContainer>
+            <Skeleton height={64} borderRadius={8} />
+          </CardContainer>
+        </View>
+        <View style={styles.flex1}>
+          <CardContainer>
+            <Skeleton height={64} borderRadius={8} />
+          </CardContainer>
+        </View>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  headerIconButton: {
+  headerIcon: {
     width: 40,
     height: 40,
-    borderRadius: 20,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
@@ -144,20 +369,20 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.8,
   },
-  sectionMargin: {
-    marginBottom: 20,
-  },
-  statsGrid: {
+  gridRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
+    alignItems: 'stretch',
   },
-  gridCard: {
+  flex1: {
     flex: 1,
-    marginBottom: 8,
   },
-  cardList: {
-    alignSelf: 'stretch',
-    gap: 2,
+  glanceGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  glanceCell: {
+    width: '33.33%',
+    paddingVertical: 8,
+    paddingRight: 8,
   },
 });

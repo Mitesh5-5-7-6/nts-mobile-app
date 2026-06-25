@@ -1,13 +1,23 @@
 import axios from 'axios';
 
-// Ensure to add this to .env or environment configuration
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api/nts/v1';
+// Base URL is injected from .env via Expo. Only EXPO_PUBLIC_* vars are inlined
+// into the app bundle, so the variable MUST keep that prefix.
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
+
+if (!API_BASE_URL && __DEV__) {
+  // Surface misconfiguration early instead of silently failing every request.
+  console.warn(
+    '[api] EXPO_PUBLIC_API_URL is not set. Add it to .env, e.g. ' +
+      'EXPO_PUBLIC_API_URL=https://neelkanth-tiffin-dashboard.vercel.app/api',
+  );
+}
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 10000,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
+    Accept: 'application/json',
   },
 });
 

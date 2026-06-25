@@ -43,8 +43,9 @@ export const QUERY_KEYS = {
   // ─── Tiffin Entries ────────────────────────────────────────────────────────
   dailyEntries: {
     all: ['daily-entries'] as const,
-    byDate: (date: string) => [...QUERY_KEYS.dailyEntries.all, 'daily-entries', date] as const,
-    preview: (params: object) => [...QUERY_KEYS.dailyEntries.all, 'daily-entries', 'preview', params] as const,
+    byDate: (date: string) => [...QUERY_KEYS.dailyEntries.all, 'by-date', date] as const,
+    preview: (date: string, fromDate?: string) =>
+      [...QUERY_KEYS.dailyEntries.all, 'preview', date, fromDate] as const,
   },
 
   // ─── Payments ──────────────────────────────────────────────────────────────

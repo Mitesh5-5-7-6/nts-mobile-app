@@ -8,6 +8,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { Tabs, useRouter } from 'expo-router';
 import AppIcon, { IconNameType } from '../ui/AppIcon';
 import { Button } from '../ui/Button';
 import { BottomSheet } from '../ui/Modal';
@@ -21,8 +22,8 @@ const TAB_CONFIG: Record<string, { label: string; icon: IconNameType }> = {
   more: { label: 'More', icon: 'more' },
 };
 
-type CustomTabBarProps = Parameters<
-  NonNullable<React.ComponentProps['tabBar']>>
+// The props expo-router's <Tabs> passes to a custom `tabBar` renderer.
+type CustomTabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>>[0];
 
 export const CustomTabBar = React.memo((props: CustomTabBarProps) => {
   const { state, descriptors, navigation } = props;
@@ -30,6 +31,7 @@ export const CustomTabBar = React.memo((props: CustomTabBarProps) => {
   const { colors, spacing, radius, shadows, typography } = useAppTheme();
   const { width } = useWindowDimensions();
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
+  const router = useRouter();
 
   // Responsive padding/margins
   const isTablet = width >= 768;
@@ -159,6 +161,16 @@ export const CustomTabBar = React.memo((props: CustomTabBarProps) => {
             Choose a quick business action to perform:
           </Text>
           <Button
+            title="Daily Tiffin Entry"
+            iconLeft="calendar"
+            onPress={() => {
+              setIsQuickAddOpen(false);
+              router.push('/daily-entry');
+            }}
+            variant="primary"
+            style={styles.sheetButton}
+          />
+          <Button
             title="Add New Customer"
             iconLeft="user"
             onPress={() => {
@@ -183,7 +195,7 @@ export const CustomTabBar = React.memo((props: CustomTabBarProps) => {
             iconLeft="expense"
             onPress={() => {
               setIsQuickAddOpen(false);
-              navigation.navigate('more');
+              router.push('/expenses');
             }}
             variant="outline"
             style={styles.sheetButton}

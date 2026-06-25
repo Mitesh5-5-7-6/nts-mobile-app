@@ -217,6 +217,9 @@ export interface CustomerPaymentSummary {
   payments: Payment[];
 }
 
+export type PaymentMethod = 'cash' | 'upi' | 'bank_transfer' | 'cheque';
+export type PaymentStatus = 'pending' | 'partial' | 'completed' | 'advance';
+
 export interface Payment {
   _id: string;
   customer_id: string;
@@ -226,13 +229,272 @@ export interface Payment {
   total_bill_amount: number;
   paid_amount: number;
   remaining_amount: number;
-  payment_method: 'cash' | 'upi' | 'bank_transfer' | 'cheque';
-  payment_status: 'pending' | 'partial' | 'completed' | 'advance';
+  payment_method: PaymentMethod;
+  payment_status: PaymentStatus;
   reference_number?: string;
   notes?: string;
   collected_by?: string;
+  /** Embedded by list endpoints. */
+  customer?: { full_name: string; phone: string; address?: string };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PaymentStats {
+  total_collected: number;
+  total_pending: number;
+  partial_count: number;
+  advance_balance: number;
+}
+
+export interface PaymentListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: PaymentStatus;
+  start_date?: string;
+  end_date?: string;
+  customer_id?: string;
+}
+
+export interface CreatePaymentPayload {
+  customer_id: string;
+  payment_date: string;
+  billing_start_date: string;
+  billing_end_date: string;
+  total_bill_amount: number;
+  paid_amount: number;
+  payment_method: PaymentMethod;
+  reference_number?: string;
+  notes?: string;
+  collected_by?: string;
+}
+
+export type UpdatePaymentPayload = Partial<
+  Pick<
+    CreatePaymentPayload,
+    'paid_amount' | 'payment_method' | 'payment_date' | 'reference_number' | 'notes' | 'collected_by'
+  >
+>;
+
+export interface GenerateBillPayload {
+  customer_id: string;
+  billing_start_date: string;
+  billing_end_date: string;
+}
+
+export interface GeneratedBill {
+  customer_id: string;
+  customer_name: string;
+  billing_start_date: string;
+  billing_end_date: string;
+  total_entries: number;
+  total_amount: number;
+  previous_pending: number;
+  advance_deduction: number;
+  final_payable: number;
+}
+
+// ─── Grouped Payments (NTS v1) ─────────────────────────────────────────────
+// Tiffin-entry-based payment system. Drives the customer-grouped ledger screen.
+
+export type GroupedEntryStatus = 'PAID' | 'PARTIAL' | 'PENDING';
+
+export interface GroupedPaymentEntry {
+  entryId: string;
+  date: string;
+  morningQty: number;
+  morningPrice: number;
+  morningPaid: boolean;
+  eveningQty: number;
+  eveningPrice: number;
+  eveningPaid: boolean;
+  totalAmount: number;
+  paidAmount: number;
+  pendingAmount: number;
+  status: GroupedEntryStatus;
+}
+
+export interface GroupedPaymentCustomer {
+  customerId: string;
+  customerName: string;
+  phone: string;
+  address: string;
+  totalAmount: number;
+  totalPaid: number;
+  totalPending: number;
+  entryCount: number;
+  status: GroupedEntryStatus;
+  entries: GroupedPaymentEntry[];
+}
+
+export interface GroupedPaymentsSummary {
+  totalCustomers: number;
+  totalAmount: number;
+  totalPaid: number;
+  totalPending: number;
+}
+
+export interface GroupedPaymentsResult {
+  customers: GroupedPaymentCustomer[];
+  summary: GroupedPaymentsSummary;
+}
+
+export interface GroupedPaymentsParams {
+  startDate?: string;
+  endDate?: string;
+  customerId?: string;
+  status?: GroupedEntryStatus;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+export type PaymentTarget = 'MORNING' | 'EVENING' | 'FULL_DAY';
+
+export interface RecordEntryPaymentPayload {
+  customerId: string;
+  tiffinEntryId: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  paymentFor: PaymentTarget;
+  notes?: string;
+}
+
+export interface UpdateEntryStatusPayload {
+  morningStatus?: 'PAID' | 'PENDING';
+  eveningStatus?: 'PAID' | 'PENDING';
+  paymentMethod?: PaymentMethod;
+  notes?: string;
+}
+
+export interface UpdateEntryStatusResult {
+  entryId: string;
+  morning_paid: boolean;
+  evening_paid: boolean;
+  totalAmount: number;
+  paidAmount: number;
+  pendingAmount: number;
+  status: GroupedEntryStatus;
+}
+
+// ─── Expenses ──────────────────────────────────────────────────────────────
+
+export type ExpenseCategory =
+  | 'RAW_MATERIAL'
+  | 'VEGETABLES'
+  | 'MILK'
+  | 'GAS'
+  | 'SALARY'
+  | 'DELIVERY'
+  | 'TRANSPORT'
+  | 'RENT'
+  | 'ELECTRICITY'
+  | 'INTERNET'
+  | 'PACKAGING'
+  | 'MARKETING'
+  | 'MAINTENANCE'
+  | 'SOFTWARE'
+  | 'MISC';
+
+export type ExpensePaymentMethod = PaymentMethod | 'credit';
+export type ExpenseStatusValue = 'PENDING' | 'PAID' | 'PARTIAL' | 'CANCELLED';
+export type RecurringType = 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
+
+export interface Expense {
+  _id: string;
+  expense_code: string;
+  title: string;
+  description?: string;
+  expense_category: ExpenseCategory[];
+  expense_subcategory?: string[];
+  expense_date: string;
+  amount: number;
+  payment_method: ExpensePaymentMethod;
+  vendor_id?: string;
+  vendor_name?: string;
+  invoice_number?: string;
+  receipt_url?: string;
+  is_recurring: boolean;
+  recurring_type?: RecurringType;
+  expense_status: ExpenseStatusValue;
+  paid_by?: string;
+  notes?: string;
+  created_by?: string;
+  is_deleted: boolean;
+  deleted_at?: string;
+  deleted_by?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExpenseListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: ExpenseCategory;
+  status?: ExpenseStatusValue;
+  payment_method?: ExpensePaymentMethod;
+  start_date?: string;
+  end_date?: string;
+  vendor_id?: string;
+  is_recurring?: 'true' | 'false';
+}
+
+export interface CreateExpensePayload {
+  title: string;
+  description?: string;
+  expense_category: ExpenseCategory[];
+  expense_subcategory?: string[];
+  expense_date: string;
+  amount: number;
+  payment_method: ExpensePaymentMethod;
+  vendor_id?: string;
+  vendor_name?: string;
+  invoice_number?: string;
+  receipt_url?: string;
+  is_recurring?: boolean;
+  recurring_type?: RecurringType;
+  expense_status?: ExpenseStatusValue;
+  paid_by?: string;
+  notes?: string;
+}
+
+export type UpdateExpensePayload = Partial<CreateExpensePayload>;
+
+export interface CategoryBreakdownItem {
+  category: string;
+  amount: number;
+  percentage: number;
+}
+
+export interface PaymentMethodBreakdownItem {
+  method: string;
+  amount: number;
+  percentage: number;
+}
+
+export interface ExpenseStats {
+  total_expense: number;
+  daily_average: number;
+  total_transactions: number;
+  top_category: CategoryBreakdownItem | null;
+  prev_total_expense: number;
+  prev_total_transactions: number;
+  today_expense: number;
+  monthly_expense: number;
+  pending_vendor_payments: number;
+  category_breakdown: CategoryBreakdownItem[];
+  payment_method_breakdown: PaymentMethodBreakdownItem[];
+  recent_expenses: Expense[];
+  start_date: string;
+  end_date: string;
+  days_in_period: number;
+}
+
+export interface ExpenseStatsParams {
+  start_date?: string;
+  end_date?: string;
 }
 
 // ─── Sync Queue ────────────────────────────────────────────────────────────

@@ -6,12 +6,21 @@ export const AnalyticsEventNames = {
   BIOMETRIC_UNLOCK: 'biometric_unlock',
   LOGOUT: 'logout',
 
+  // Dashboard Events
+  DASHBOARD_OPENED: 'dashboard_opened',
+  DASHBOARD_REFRESHED: 'dashboard_refreshed',
+
   // Customer Events
   CUSTOMER_CREATED: 'customer_created',
   CUSTOMER_UPDATED: 'customer_updated',
+  CUSTOMER_DELETED: 'customer_deleted',
+  CUSTOMER_VIEWED: 'customer_viewed',
 
   // Core Business Events
   DAILY_ENTRY_SAVED: 'daily_entry_saved',
+  TIFFIN_ENTRY_UPDATED: 'tiffin_entry_updated',
+  COPY_PREVIOUS_DAY: 'copy_previous_day',
+  OFFLINE_SYNC_COMPLETED: 'offline_sync_completed',
   PAYMENT_RECORDED: 'payment_recorded',
   EXPENSE_ADDED: 'expense_added',
 

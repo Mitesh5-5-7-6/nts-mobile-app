@@ -1,0 +1,27 @@
+Phase 4
+Payments Module (most critical business flow)
+Expenses Module
+
+Phase 5
+Reports
+Entry Closing
+Monthly Closing
+Year Closing
+
+Phase 6
+Telegram Integration
+Notification Center
+Backup & Restore
+Settings
+
+Phase 4 → Payment Module
+
+Phase 5 → Expense Module
+
+Phase 6 → Reports Module
+
+Phase 7 → Entry Closing Module
+
+Phase 8 → Settings Module
+
+Phase 9 → Telegram AI Agent
