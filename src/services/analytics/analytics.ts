@@ -1,12 +1,24 @@
 import analytics from '@react-native-firebase/analytics';
+import { Platform } from 'react-native';
 import { AnalyticsEventName, ScreenName } from './events';
 import { logger } from '../monitoring/logger';
 
 class AnalyticsService {
   /**
+   * @react-native-firebase/analytics is a native-only SDK. On web there is no
+   * native Firebase app, so calling analytics() throws
+   * "No Firebase App '[DEFAULT]' has been created". Analytics is not supported
+   * on web in this app, so every method short-circuits there.
+   */
+  private get isSupported() {
+    return Platform.OS !== 'web';
+  }
+
+  /**
    * Tracks a predefined business event.
    */
   async trackEvent(eventName: AnalyticsEventName, params?: Record<string, any>) {
+    if (!this.isSupported) return;
     try {
       await analytics().logEvent(eventName, params);
       logger.debug(`Analytics Event Tracked: ${eventName}`, params);
@@ -19,6 +31,7 @@ class AnalyticsService {
    * Tracks a custom action not covered by predefined business events.
    */
   async trackAction(actionName: string, params?: Record<string, any>) {
+    if (!this.isSupported) return;
     try {
       // Firebase event names can only contain alphanumeric characters and underscores
       const safeName = actionName.replace(/[^a-zA-Z0-9_]/g, '_').substring(0, 40);
@@ -33,6 +46,7 @@ class AnalyticsService {
    * Tracks screen views. Usually hooked into navigation state changes.
    */
   async trackScreen(screenName: ScreenName | string, screenClass?: string) {
+    if (!this.isSupported) return;
     try {
       await analytics().logScreenView({
         screen_name: screenName,
@@ -48,6 +62,7 @@ class AnalyticsService {
    * Tracks non-fatal errors for analytics dashboarding.
    */
   async trackError(errorName: string, errorMessage: string, params?: Record<string, any>) {
+    if (!this.isSupported) return;
     try {
       await analytics().logEvent('app_error', {
         error_name: errorName,
@@ -64,6 +79,7 @@ class AnalyticsService {
    * Sets the user ID for analytics.
    */
   async setUserId(userId: string) {
+    if (!this.isSupported) return;
     try {
       await analytics().setUserId(userId);
       logger.debug(`Analytics UserId Set: ${userId}`);
@@ -76,6 +92,7 @@ class AnalyticsService {
    * Sets user properties (e.g., subscription type, account role).
    */
   async setUserProperties(properties: Record<string, string>) {
+    if (!this.isSupported) return;
     try {
       // Firebase requires properties to be strings
       await analytics().setUserProperties(properties);

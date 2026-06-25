@@ -1,6 +1,7 @@
 import { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import apiClient from './client';
 import { useAuthStore } from '../../store/auth.store';
+import { AuthService } from './auth.service';
 import { handleApiError } from '../../lib/api-error';
 
 let isRefreshing = false;
@@ -41,7 +42,15 @@ export const setupInterceptors = () => {
       // Standardize error format
       const apiError = handleApiError(error);
 
-      if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      // Never try to refresh the refresh call itself (avoids an infinite loop).
+      const isRefreshCall = originalRequest?.url?.includes('/mobile/auth/refresh');
+
+      if (
+        error.response?.status === 401 &&
+        originalRequest &&
+        !originalRequest._retry &&
+        !isRefreshCall
+      ) {
         if (isRefreshing) {
           try {
             const token = await new Promise<string>((resolve, reject) => {
@@ -58,34 +67,22 @@ export const setupInterceptors = () => {
         isRefreshing = true;
 
         try {
-          const refreshToken = useAuthStore.getState().refreshToken;
-          if (!refreshToken) {
-            throw new Error('No refresh token available');
-          }
+          // The refresh token is an HTTP-only cookie sent automatically; no
+          // token is passed in the body.
+          const { accessToken } = await AuthService.refresh();
 
-          // Directly use axios to avoid interceptor loops
-          const { data } = await apiClient.post('/auth/refresh', { refreshToken }, {
-            // Avoid interceptor logic for this specific call if needed, or rely on normal base client
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          });
+          useAuthStore.getState().setAccessToken(accessToken);
 
-          const newAccessToken = data.accessToken;
-          const newRefreshToken = data.refreshToken || refreshToken; // In case they do rotation
-          
-          useAuthStore.getState().updateTokens(newAccessToken, newRefreshToken);
-
-          processQueue(null, newAccessToken);
+          processQueue(null, accessToken);
           isRefreshing = false;
 
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           return apiClient(originalRequest);
         } catch (refreshError) {
           processQueue(refreshError, null);
           isRefreshing = false;
-          // Refresh token failed. Logout.
-          useAuthStore.getState().logout();
+          // Refresh failed (cookie missing/expired). Log the user out.
+          await useAuthStore.getState().logout();
           return Promise.reject(handleApiError(refreshError));
         }
       }

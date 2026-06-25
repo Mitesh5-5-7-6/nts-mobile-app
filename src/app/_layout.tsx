@@ -55,7 +55,7 @@ function LayoutContent() {
   const router = useRouter();
   
   const { isAuthenticated, isHydrated, hydrate } = useAuthStore();
-  const { isLocked, retryUnlock } = useSessionLock();
+  const { isLocked, retryUnlock } = useSessionLock(isAuthenticated);
 
   useEffect(() => {
     performanceMonitor.startMark('AppStartup');

@@ -15,6 +15,9 @@ if (!API_BASE_URL && __DEV__) {
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
+  // The refresh token is delivered as an HTTP-only cookie; withCredentials
+  // ensures it is sent on /auth/refresh (and any authenticated request).
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
