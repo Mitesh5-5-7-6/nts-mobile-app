@@ -9,6 +9,15 @@ class NotificationService {
    * Initializes notification channels and handlers
    */
   async initialize() {
+    // @react-native-firebase/messaging is a native-only SDK. On web there is no
+    // native Firebase app, so calling messaging() throws
+    // "No Firebase App '[DEFAULT]' has been created". Push notifications are not
+    // supported on web in this app, so skip initialization entirely.
+    if (Platform.OS === 'web') {
+      logger.debug('Push notifications are not supported on web; skipping init');
+      return;
+    }
+
     try {
       // Request permissions
       const authStatus = await messaging().requestPermission();

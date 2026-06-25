@@ -9,9 +9,28 @@ import {
   clearLastBackgroundTime,
 } from '../storage/biometric.storage';
 
-export const useSessionLock = () => {
+export const useSessionLock = (isAuthenticated: boolean) => {
   const [isLocked, setIsLocked] = useState(false);
   const appState = useRef(AppState.currentState);
+  const didRunLaunchCheck = useRef(false);
+
+  // On a fresh launch, gate the dashboard behind biometrics (spec: validate
+  // biometric before opening dashboard; do NOT re-enter email/password). Only
+  // runs once, only when authenticated and biometrics are enabled.
+  const handleLaunchLock = async () => {
+    if (didRunLaunchCheck.current) return;
+    didRunLaunchCheck.current = true;
+
+    if (!isAuthenticated || !getIsBiometricEnabled()) return;
+
+    setIsLocked(true);
+    const success = await BiometricService.authenticate('Unlock TiffinTrack');
+    if (success) {
+      setIsLocked(false);
+      clearLastBackgroundTime();
+    }
+    // On failure stay locked; the LockOverlay exposes a retry button.
+  };
 
   const handleAppForeground = async () => {
     const isBiometricEnabled = getIsBiometricEnabled();
@@ -65,6 +84,14 @@ export const useSessionLock = () => {
       subscription.remove();
     };
   }, []);
+
+  // Run the launch-time biometric gate once the auth state is known.
+  useEffect(() => {
+    if (isAuthenticated) {
+      handleLaunchLock();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   const retryUnlock = async () => {
     const success = await BiometricService.authenticate('Unlock TiffinTrack');

@@ -24,12 +24,10 @@ export default function LoginScreen() {
       login({
         user: response.user,
         accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        expiresAt: response.expiresAt,
       });
-      
+
       // Navigate to main app
-      router.replace('/');
+      router.replace('/(tabs)');
     } catch (error: any) {
       Alert.alert('Login Failed', error.message || 'An error occurred during login.');
     } finally {

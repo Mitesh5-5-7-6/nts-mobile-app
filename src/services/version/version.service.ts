@@ -16,6 +16,9 @@ class VersionService {
    * Checks the backend to see if a force update is required
    */
   async checkAppVersion() {
+    // Force-update is a native app-store concept; there is no store build on web.
+    if (Platform.OS === 'web') return false;
+
     try {
       const response = await apiClient.get<VersionResponse>('/mobile/version');
       const { forceUpdate, updateUrl } = response.data;
@@ -28,7 +31,10 @@ class VersionService {
 
       return false;
     } catch (error) {
-      logger.error('Failed to check app version', error);
+      // Non-fatal: the app continues normally if the version check is
+      // unreachable (offline, not yet authenticated, etc.). Log at warn so it
+      // is not reported to Sentry as an application error.
+      logger.warn('Skipping app version check (unreachable)', error);
       return false;
     }
   }

@@ -10,6 +10,9 @@ class TokenService {
    * Should be called on first login or when token refreshes.
    */
   async registerDevice(userId: string) {
+    // @react-native-firebase/messaging is native-only; messaging() throws on web
+    // ("No Firebase App '[DEFAULT]' has been created"). FCM is unsupported on web.
+    if (Platform.OS === 'web') return;
     try {
       // Get the device token
       const fcmToken = await messaging().getToken();
@@ -42,6 +45,8 @@ class TokenService {
    * Listen for FCM token refreshes
    */
   setupTokenRefreshListener(userId: string) {
+    // FCM is native-only; messaging() throws on web. Return a no-op unsubscribe.
+    if (Platform.OS === 'web') return () => {};
     return messaging().onTokenRefresh(async (fcmToken) => {
       logger.info('FCM Token Refreshed, updating backend...');
       try {
