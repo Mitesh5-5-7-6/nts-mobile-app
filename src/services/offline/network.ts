@@ -1,5 +1,6 @@
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
 import { createStore } from 'zustand/vanilla';
+import { SyncQueueService } from './syncQueue';
 
 export type NetworkStatus = 'ONLINE' | 'OFFLINE' | 'RECONNECTING';
 
@@ -24,7 +25,9 @@ export const networkStore = createStore<NetworkState>((set) => ({
       // Basic heuristic for reconnecting state
       if (prev.status === 'OFFLINE' && isOnline) {
          newStatus = 'RECONNECTING';
-         // We will switch back to ONLINE after sync or small delay
+         // Flush any queued offline mutations now that connectivity is back.
+         void SyncQueueService.sync();
+         // Switch back to ONLINE after a short settle delay.
          setTimeout(() => {
            networkStore.getState().setStatus('ONLINE');
          }, 3000);

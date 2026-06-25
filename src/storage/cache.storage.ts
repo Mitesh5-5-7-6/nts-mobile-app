@@ -1,18 +1,28 @@
 import { storage } from './index';
-import type { Storage } from '@tanstack/query-sync-storage-persister';
 
 /**
- * MMKV implementation of the Storage interface required by TanStack Query Sync Storage Persister.
+ * Minimal synchronous storage interface expected by TanStack Query's
+ * sync-storage persister ({@link https://tanstack.com/query} ).
+ * Defined locally because the package does not export this type.
  */
-export const queryCacheStorage: Storage = {
-  setItem: (key, value) => {
+interface SyncStorage {
+  getItem: (key: string) => string | null;
+  setItem: (key: string, value: string) => void;
+  removeItem: (key: string) => void;
+}
+
+/**
+ * MMKV-backed implementation of the persister's storage contract.
+ */
+export const queryCacheStorage: SyncStorage = {
+  setItem: (key: string, value: string) => {
     storage.set(`query_cache_${key}`, value);
   },
-  getItem: (key) => {
+  getItem: (key: string) => {
     const value = storage.getString(`query_cache_${key}`);
     return value === undefined ? null : value;
   },
-  removeItem: (key) => {
-    storage.delete(`query_cache_${key}`);
+  removeItem: (key: string) => {
+    storage.remove(`query_cache_${key}`);
   },
 };

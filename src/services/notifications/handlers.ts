@@ -28,19 +28,21 @@ export const handleNotificationOpen = (message: FirebaseMessagingTypes.RemoteMes
         // Example: router.push(`/expenses/${targetId}`);
         logger.debug('Routing to expense:', targetId);
       } else {
-        router.push('/(tabs)/expenses');
+        // TODO(Phase 5): route to the Expenses screen once it exists.
+        router.push('/');
       }
       break;
 
     case 'DAILY_SUMMARY':
     case 'MONTH_CLOSING_REMINDER':
     case 'YEAR_CLOSING_REMINDER':
-      router.push('/(tabs)/reports');
+      // TODO(Phase 6): route to the Reports screen once it exists.
+      router.push('/');
       break;
 
     case 'LOW_BALANCE_ALERT':
-      // Route to dashboard or specific customer depending on logic
-      router.push('/(tabs)/dashboard');
+      // Route to the dashboard (index route).
+      router.push('/');
       break;
 
     case 'SYSTEM_UPDATE':

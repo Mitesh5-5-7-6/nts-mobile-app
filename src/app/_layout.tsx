@@ -1,5 +1,5 @@
 import '../global.css';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider, Stack, useRouter, useSegments } from 'expo-router';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { ThemeProvider as AppThemeProvider, useAppTheme } from '@/theme';
@@ -104,6 +104,8 @@ function LayoutContent() {
     <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="daily-entry" options={{ headerShown: false, animation: 'slide_from_right' }} />
+        <Stack.Screen name="expenses" options={{ headerShown: false, animation: 'slide_from_right' }} />
         <Stack.Screen name="login" options={{ headerShown: false, animation: 'fade' }} />
         <Stack.Screen name="(system)/update" options={{ headerShown: false, presentation: 'fullScreenModal' }} />
       </Stack>

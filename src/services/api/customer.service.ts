@@ -67,7 +67,7 @@ export const CustomerService = {
 
   getPaymentSummary: async (customerId: string) => {
     const response = await apiClient.get<ApiResponse<CustomerPaymentSummary>>(
-      `/../../payments/customer-summary/${customerId}`
+      `/payments/customer-summary/${customerId}`
     );
     return response.data;
   },
