@@ -1,21 +1,21 @@
-import '../global.css';
-import { useEffect } from 'react';
-import { DarkTheme, DefaultTheme, ThemeProvider, Stack, useRouter, useSegments } from 'expo-router';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { ThemeProvider as AppThemeProvider, useAppTheme } from '@/theme';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider, useRouter, useSegments } from 'expo-router';
+import { useEffect } from 'react';
+import '../global.css';
 
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSessionLock } from '../hooks/useSessionLock';
 import { QueryProvider } from '../lib/query/query-config';
-import { useAuthStore } from '../store/auth.store';
 import { setupInterceptors } from '../services/api/interceptors';
 import { NetworkService } from '../services/offline/network';
-import { useSessionLock } from '../hooks/useSessionLock';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useAuthStore } from '../store/auth.store';
 
 // Monitoring, Analytics, Notifications
-import { initializeSentry } from '../services/monitoring/sentry';
-import { performanceMonitor } from '../services/monitoring/performance';
-import { ErrorBoundary } from '../components/system/ErrorBoundary';
 import * as Sentry from '@sentry/react-native';
+import { ErrorBoundary } from '../components/system/ErrorBoundary';
+import { performanceMonitor } from '../services/monitoring/performance';
+import { initializeSentry } from '../services/monitoring/sentry';
 import { notificationService } from '../services/notifications/notification.service';
 import { versionService } from '../services/version/version.service';
 
@@ -53,7 +53,7 @@ function LayoutContent() {
   const { isDark } = useAppTheme();
   const segments = useSegments();
   const router = useRouter();
-  
+
   const { isAuthenticated, isHydrated, hydrate } = useAuthStore();
   const { isLocked, retryUnlock } = useSessionLock(isAuthenticated);
 
@@ -63,7 +63,7 @@ function LayoutContent() {
     // 1. Initialize things
     setupInterceptors();
     NetworkService.initialize();
-    
+
     // Check App Version for Force Updates
     versionService.checkAppVersion();
 

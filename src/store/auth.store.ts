@@ -1,13 +1,13 @@
-import { create } from 'zustand';
+import { create } from "zustand";
+import { AuthService, type AuthUser } from "../services/api/auth.service";
+import { logger } from "../services/monitoring/logger";
 import {
-  getAccessToken,
-  setAccessToken,
-  getStoredUser,
-  setStoredUser,
   clearAuthSession,
-} from '../storage/auth.storage';
-import { AuthService, type AuthUser } from '../services/api/auth.service';
-import { logger } from '../services/monitoring/logger';
+  getAccessToken,
+  getStoredUser,
+  setAccessToken,
+  setStoredUser,
+} from "../storage/auth.storage";
 
 interface AuthState {
   isAuthenticated: boolean;
@@ -64,14 +64,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const cachedToken = getAccessToken();
     const cachedUser = getStoredUser();
 
-    // Optimistically restore the cached session so the UI does not flash login
-    // while the refresh call is in flight.
     if (cachedToken && cachedUser) {
-      set({ isAuthenticated: true, user: cachedUser, accessToken: cachedToken });
+      set({
+        isAuthenticated: true,
+        user: cachedUser,
+        accessToken: cachedToken,
+      });
     }
 
     try {
-      // Auto-login: the refresh cookie is sent automatically (withCredentials).
       const { accessToken, user } = await AuthService.refresh();
       setAccessToken(accessToken);
       setStoredUser(user);
@@ -82,15 +83,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isHydrated: true,
       });
     } catch (error) {
-      // No valid refresh cookie -> session cannot be continued. Require login.
-      logger.debug('Auto-login refresh failed; clearing session', error);
-      clearAuthSession();
-      set({
-        isAuthenticated: false,
-        user: null,
-        accessToken: null,
-        isHydrated: true,
-      });
+      logger.debug("Auto-login refresh failed", error);
+
+      // Only clear state if we weren't already authenticated by a fresh login
+      // that happened in parallel. Otherwise just mark hydration complete.
+      const current = get();
+      if (!current.isAuthenticated) {
+        clearAuthSession();
+        set({
+          user: null,
+          accessToken: null,
+          isHydrated: true,
+        });
+      } else {
+        set({ isHydrated: true });
+      }
     }
   },
 }));

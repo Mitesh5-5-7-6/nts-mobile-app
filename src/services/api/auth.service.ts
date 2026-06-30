@@ -1,6 +1,6 @@
-import apiClient from './client';
-import type { ApiResponse } from '../../types/api.types';
-import { ApiError } from '../../lib/api-error';
+import { ApiError } from "../../lib/api-error";
+import type { ApiResponse } from "../../types/api.types";
+import apiClient from "./client";
 
 export interface AuthUser {
   id: string;
@@ -28,17 +28,20 @@ export const AuthService = {
    * the client is configured with `withCredentials`).
    */
   login: async (email: string, password: string): Promise<AuthPayload> => {
-    const response = await apiClient.post<ApiResponse<AuthPayload>>('/mobile/auth/login', {
-      email,
-      password,
-    });
+    const response = await apiClient.post<ApiResponse<AuthPayload>>(
+      "/nts/v1/auth/login",
+      {
+        email,
+        password,
+      },
+    );
     const payload = response.data?.data;
     // Guard against an empty/204 body (e.g. hitting a cookie-only auth route):
     // fail loudly instead of silently leaving the user unauthenticated.
     if (!payload?.accessToken) {
       throw new ApiError(
-        'Login did not return an access token.',
-        'INVALID_LOGIN_RESPONSE',
+        "Login did not return an access token.",
+        "INVALID_LOGIN_RESPONSE",
       );
     }
     return payload;
@@ -49,7 +52,10 @@ export const AuthService = {
    * No token is sent in the body — the cookie carries the refresh credential.
    */
   refresh: async (): Promise<AuthPayload> => {
-    const response = await apiClient.post<ApiResponse<AuthPayload>>('/mobile/auth/refresh', {});
+    const response = await apiClient.post<ApiResponse<AuthPayload>>(
+      "/nts/v1/auth/refresh",
+      {},
+    );
     return response.data.data;
   },
 
@@ -58,7 +64,7 @@ export const AuthService = {
    */
   logout: async (): Promise<void> => {
     try {
-      await apiClient.post('/mobile/auth/logout', {});
+      await apiClient.post("/nts/v1/auth/logout", {});
     } catch {
       // Ignore network/logout errors — local session is cleared regardless.
     }
