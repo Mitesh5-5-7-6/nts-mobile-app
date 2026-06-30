@@ -1,4 +1,4 @@
-import messaging from '@react-native-firebase/messaging';
+import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { logger } from '../monitoring/logger';
@@ -58,7 +58,7 @@ class NotificationService {
 
   private setupHandlers() {
     // 1. Foreground message handler
-    messaging().onMessage(async remoteMessage => {
+    messaging().onMessage(async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
       logger.debug('Received foreground message', remoteMessage);
       // Let Expo Notifications show it, or handle custom in-app UI
     });
@@ -70,13 +70,13 @@ class NotificationService {
     // });
 
     // 3. User taps on notification (App is in background)
-    messaging().onNotificationOpenedApp(remoteMessage => {
+    messaging().onNotificationOpenedApp((remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
       logger.debug('Notification caused app to open from background state', remoteMessage);
       handleNotificationOpen(remoteMessage);
     });
 
     // 4. User taps on notification (App was completely killed)
-    messaging().getInitialNotification().then(remoteMessage => {
+    messaging().getInitialNotification().then((remoteMessage: FirebaseMessagingTypes.RemoteMessage | null) => {
       if (remoteMessage) {
         logger.debug('Notification caused app to open from quit state', remoteMessage);
         handleNotificationOpen(remoteMessage);

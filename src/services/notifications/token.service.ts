@@ -47,7 +47,7 @@ class TokenService {
   setupTokenRefreshListener(userId: string) {
     // FCM is native-only; messaging() throws on web. Return a no-op unsubscribe.
     if (Platform.OS === 'web') return () => {};
-    return messaging().onTokenRefresh(async (fcmToken) => {
+    return messaging().onTokenRefresh(async (fcmToken: string) => {
       logger.info('FCM Token Refreshed, updating backend...');
       try {
         const deviceId = Platform.OS === 'android' ? Application.getAndroidId() : (await Application.getIosIdForVendorAsync());
