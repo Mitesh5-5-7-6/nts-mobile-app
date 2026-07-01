@@ -25,3 +25,34 @@ Phase 7 → Entry Closing Module
 Phase 8 → Settings Module
 
 Phase 9 → Telegram AI Agent
+
+// google-services.json
+{
+  "project_info": {
+    "project_number": "740975710312",
+    "project_id": "nts-mobile",
+    "storage_bucket": "nts-mobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:740975710312:android:85cec582e2d70cc340ebdd",
+        "android_client_info": {
+          "package_name": "com.mitesh5576.ntsmobileapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA4ApYYvE2Ho_i6gx8kPxt6bWc7I-kqXt0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
